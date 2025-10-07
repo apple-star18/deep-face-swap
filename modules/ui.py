@@ -38,6 +38,29 @@ import platform
 if platform.system() == "Windows":
     from pygrabber.dshow_graph import FilterGraph
 
+# --- Tk 9.0 compatibility patch ---
+# In Tk 9.0, Menu.index("end") returns "" instead of raising TclError
+# when the menu is empty. CustomTkinter's CTkOptionMenu doesn't handle
+# this, causing crashes. This patch adds the missing guard.
+try:
+    from customtkinter.windows.widgets.core_widget_classes import DropdownMenu as _DropdownMenu
+
+    _original_add_menu_commands = _DropdownMenu._add_menu_commands
+
+    def _patched_add_menu_commands(self, *args, **kwargs):
+        try:
+            end_index = self._menu.index("end")
+            if end_index == "" or end_index is None:
+                return
+        except Exception:
+            pass
+        _original_add_menu_commands(self, *args, **kwargs)
+
+    _DropdownMenu._add_menu_commands = _patched_add_menu_commands
+except (ImportError, AttributeError):
+    pass  # CustomTkinter version doesn't have this class path
+# --- End Tk 9.0 patch ---
+
 ROOT = None
 POPUP = None
 POPUP_LIVE = None
